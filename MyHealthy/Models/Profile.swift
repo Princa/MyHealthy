@@ -36,6 +36,9 @@ final class Profile {
     var eveningCheckEnabled: Bool = true
     /// Minutes after midnight (1200 = 8:00 PM).
     var eveningCheckMinutes: Int = 1200
+    var bedtimeReminderEnabled: Bool = false
+    /// Minutes after midnight (1350 = 10:30 PM).
+    var bedtimeMinutes: Int = 1350
     var createdAt: Date = Date()
 
     @Relationship(deleteRule: .cascade, inverse: \BPReading.profile)
@@ -43,6 +46,9 @@ final class Profile {
 
     @Relationship(deleteRule: .cascade, inverse: \Medication.profile)
     var medications: [Medication]? = []
+
+    @Relationship(deleteRule: .cascade, inverse: \SleepLog.profile)
+    var sleepLogs: [SleepLog]? = []
 
     init(name: String, colorIndex: Int = 0) {
         self.name = name
@@ -91,6 +97,26 @@ final class Profile {
         (medications ?? [])
             .filter { !$0.isActive }
             .sorted { ($0.stoppedAt ?? .distantPast) > ($1.stoppedAt ?? .distantPast) }
+    }
+
+    /// Finished sleeps, newest first.
+    var sortedSleepLogs: [SleepLog] {
+        (sleepLogs ?? []).filter { !$0.isInProgress }.sorted { $0.bedtime > $1.bedtime }
+    }
+
+    /// The sleep started with "Going to Sleep" that hasn't ended yet.
+    var activeSleep: SleepLog? {
+        (sleepLogs ?? []).filter(\.isInProgress).max { $0.bedtime < $1.bedtime }
+    }
+
+    var lastSleep: SleepLog? { sortedSleepLogs.first }
+
+    /// Finished sleeps whose night is on or after `start`.
+    func sleepPoints(since start: Date? = nil) -> [SleepPoint] {
+        (sleepLogs ?? []).compactMap { log in
+            if let start, log.night < start { return nil }
+            return log.point
+        }
     }
 
     /// Readings as plain values for statistics, optionally limited to those on or after `start`.

@@ -30,6 +30,6 @@ struct MyHealthyApp: App {
             RootView()
                 .environmentObject(lock)
         }
-        .modelContainer(for: [Profile.self, BPReading.self, Medication.self, DoseLog.self])
+        .modelContainer(for: [Profile.self, BPReading.self, Medication.self, DoseLog.self, SleepLog.self])
     }
 }

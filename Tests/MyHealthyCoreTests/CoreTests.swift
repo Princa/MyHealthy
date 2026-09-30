@@ -184,3 +184,54 @@ final class DrugTextTests: XCTestCase {
         XCTAssertTrue(MedicationLibrary.search("x").isEmpty)
     }
 }
+
+final class SleepTests: XCTestCase {
+    var calendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        return calendar
+    }()
+
+    func date(_ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: 9, day: day, hour: hour, minute: minute))!
+    }
+
+    func testWakeRollsToNextDay() {
+        XCTAssertEqual(SleepMath.wake(after: date(28, 22, 30), wakeMinutes: 390, calendar: calendar), date(29, 6, 30))
+        XCTAssertEqual(SleepMath.wake(after: date(29, 0, 40), wakeMinutes: 420, calendar: calendar), date(29, 7))
+        // A nap: same day.
+        XCTAssertEqual(SleepMath.wake(after: date(29, 13), wakeMinutes: 14 * 60, calendar: calendar), date(29, 14))
+    }
+
+    func testNightOfAfterMidnightBedtime() {
+        XCTAssertEqual(SleepMath.night(of: date(28, 22, 30), calendar: calendar), date(28, 0))
+        XCTAssertEqual(SleepMath.night(of: date(29, 0, 40), calendar: calendar), date(28, 0))
+    }
+
+    func testProblems() {
+        let now = date(29, 9)
+        XCTAssertNil(SleepMath.problem(bedtime: date(28, 23), wake: date(29, 7), now: now))
+        XCTAssertNotNil(SleepMath.problem(bedtime: date(29, 7), wake: date(29, 7), now: now))
+        XCTAssertNotNil(SleepMath.problem(bedtime: date(27, 23), wake: date(29, 7), now: now))
+        XCTAssertNotNil(SleepMath.problem(bedtime: date(29, 1), wake: date(29, 10), now: now))
+    }
+
+    func testDurationText() {
+        XCTAssertEqual(SleepMath.durationText(7 * 3600 + 20 * 60), "7h 20m")
+        XCTAssertEqual(SleepMath.durationText(8 * 3600), "8h")
+        XCTAssertEqual(SleepMath.durationText(45 * 60), "45m")
+    }
+
+    func testSummaryAveragesAcrossMidnight() {
+        let points = [
+            SleepPoint(bedtime: date(27, 23, 30), wake: date(28, 7)),   // 7h 30m
+            SleepPoint(bedtime: date(29, 0, 30), wake: date(29, 7)),    // 6h 30m
+        ]
+        let summary = SleepStats.summarize(points, calendar: calendar)
+        XCTAssertEqual(summary.nights, 2)
+        XCTAssertEqual(summary.averageDuration, 7 * 3600)
+        XCTAssertEqual(summary.usualBedtime, 0)        // midnight, not noon
+        XCTAssertEqual(summary.usualWake, 7 * 60)
+    }
+}

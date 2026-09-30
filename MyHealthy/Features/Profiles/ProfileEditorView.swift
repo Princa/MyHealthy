@@ -15,6 +15,8 @@ struct ProfileDraft {
     var morningTime = Fmt.date(fromMinutes: 450)
     var eveningOn = true
     var eveningTime = Fmt.date(fromMinutes: 1200)
+    var bedtimeOn = false
+    var bedtime = Fmt.date(fromMinutes: 1350)
     var doctorName = ""
     var colorIndex = 0
 
@@ -36,6 +38,8 @@ struct ProfileDraft {
         morningTime = Fmt.date(fromMinutes: profile.morningCheckMinutes)
         eveningOn = profile.eveningCheckEnabled
         eveningTime = Fmt.date(fromMinutes: profile.eveningCheckMinutes)
+        bedtimeOn = profile.bedtimeReminderEnabled
+        bedtime = Fmt.date(fromMinutes: profile.bedtimeMinutes)
         doctorName = profile.doctorName
         colorIndex = profile.colorIndex
     }
@@ -66,6 +70,8 @@ struct ProfileDraft {
         profile.morningCheckMinutes = Fmt.minutes(from: morningTime)
         profile.eveningCheckEnabled = eveningOn
         profile.eveningCheckMinutes = Fmt.minutes(from: eveningTime)
+        profile.bedtimeReminderEnabled = bedtimeOn
+        profile.bedtimeMinutes = Fmt.minutes(from: bedtime)
         profile.doctorName = doctorName.trimmingCharacters(in: .whitespacesAndNewlines)
         profile.colorIndex = colorIndex
     }
@@ -188,6 +194,17 @@ struct ProfileEditorView: View {
                     Text("Blood pressure")
                 } footer: {
                     Text("135/85 is the usual threshold for home readings. Ask the doctor for a personal target.")
+                }
+
+                Section {
+                    Toggle("Bedtime reminder", isOn: $draft.bedtimeOn)
+                    if draft.bedtimeOn {
+                        DatePicker("Bedtime", selection: $draft.bedtime, displayedComponents: .hourAndMinute)
+                    }
+                } header: {
+                    Text("Sleep")
+                } footer: {
+                    Text("A nightly nudge to mark when you go to sleep. Your usual bedtime also pre-fills manual sleep entries.")
                 }
 
                 Section {

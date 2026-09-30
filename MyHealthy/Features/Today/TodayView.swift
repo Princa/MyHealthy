@@ -8,6 +8,8 @@ struct TodayView: View {
     let profiles: [Profile]
     @Binding var tab: AppTab
     @State private var showingLog = false
+    @State private var showingSleepLog = false
+    @State private var editingSleep: SleepLog?
 
     var body: some View {
         NavigationStack {
@@ -29,6 +31,7 @@ struct TodayView: View {
                     .buttonStyle(PrimaryButtonStyle())
 
                     medicationsCard
+                    sleepCard
                     weekCard
                 }
                 .padding(.horizontal, Metrics.screenPadding)
@@ -43,6 +46,12 @@ struct TodayView: View {
             }
             .sheet(isPresented: $showingLog) {
                 LogReadingView(profile: profile)
+            }
+            .sheet(isPresented: $showingSleepLog) {
+                LogSleepView(profile: profile)
+            }
+            .sheet(item: $editingSleep) { log in
+                LogSleepView(profile: profile, log: log)
             }
         }
     }
@@ -207,6 +216,114 @@ struct TodayView: View {
                 )
             }
         }
+    }
+
+    // MARK: Sleep
+
+    private var sleepCard: some View {
+        let week = SleepStats.summarize(profile.sleepPoints(since: TrendRange.week.startDate()))
+        return Card(spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Sleep")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                NavigationLink {
+                    SleepHistoryView(profile: profile)
+                } label: {
+                    HStack(spacing: 3) {
+                        if let average = week.averageDuration {
+                            Text("7-day avg")
+                            Text(SleepMath.durationText(average))
+                                .font(.bpNumber(15))
+                        } else {
+                            Text("History")
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                    }
+                    .font(.subheadline)
+                    .frame(minHeight: 32)
+                }
+            }
+
+            if let active = profile.activeSleep {
+                HStack(spacing: 10) {
+                    Image(systemName: "moon.zzz.fill")
+                        .font(.title2)
+                        .foregroundStyle(Palette.sleep)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Asleep since \(Calendar.current.isDateInToday(active.bedtime) ? Fmt.time(active.bedtime) : Fmt.dayAndTime(active.bedtime))")
+                            .font(.body.weight(.medium))
+                        TimelineView(.periodic(from: .now, by: 60)) { context in
+                            Text(SleepMath.durationText(context.date.timeIntervalSince(active.bedtime)) + " so far")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                Button {
+                    if !SleepActions.wakeUp(active, context: context) {
+                        editingSleep = active
+                    }
+                } label: {
+                    Label("I’m Awake", systemImage: "sun.max.fill")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                Button("Edit bedtime") {
+                    editingSleep = active
+                }
+                .font(.subheadline)
+                .frame(maxWidth: .infinity, minHeight: 44)
+            } else {
+                if let last = profile.lastSleep, let duration = last.duration {
+                    Button {
+                        editingSleep = last
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(SleepMath.durationText(duration))
+                                .font(.bpNumber(34))
+                                .foregroundStyle(Palette.sleep)
+                            Text("\(nightLabel(last.night)) · \(last.rangeText)")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Edit this entry")
+                } else {
+                    Text("Mark when you go to sleep and wake up to track sleep hours.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                HStack(spacing: 10) {
+                    Button {
+                        SleepActions.startSleep(for: profile, context: context)
+                    } label: {
+                        Label("Going to Sleep", systemImage: "moon.fill")
+                    }
+                    .buttonStyle(SoftButtonStyle())
+                    Button {
+                        showingSleepLog = true
+                    } label: {
+                        Label("Log Sleep", systemImage: "square.and.pencil")
+                    }
+                    .buttonStyle(SoftButtonStyle())
+                }
+            }
+        }
+    }
+
+    private func nightLabel(_ night: Date) -> String {
+        let calendar = Calendar.current
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: Date())),
+           calendar.isDate(night, inSameDayAs: yesterday) {
+            return "Last night"
+        }
+        if calendar.isDateInToday(night) { return "Tonight" }
+        return "Night of \(Fmt.monthDay(night))"
     }
 
     // MARK: Last 7 days

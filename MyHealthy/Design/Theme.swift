@@ -41,6 +41,9 @@ enum Palette {
     static let warnSoft = Color.adaptive(0xFCEBD9, 0x3A2410)
     static let warnFill = Color.adaptive(0xF6C8A0, 0x5A3414)
 
+    static let sleep = Color.adaptive(0x5B3FA8, 0xB7A3F0)
+    static let sleepSoft = Color.adaptive(0xEDE7F8, 0x2A2242)
+
     static let background = Color(uiColor: .systemGroupedBackground)
     static let card = Color(uiColor: .secondarySystemGroupedBackground)
     static let fieldBackground = Color(uiColor: .tertiarySystemFill)

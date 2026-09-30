@@ -10,7 +10,7 @@ struct ReminderSpec: Equatable {
     var minutes: Int
 }
 
-/// Keeps local notifications in step with every profile's check times and medication schedules.
+/// Keeps local notifications in step with every profile's check times, bedtimes and medication schedules.
 enum ReminderScheduler {
     static let prefix = "myhealthy."
     /// iOS keeps at most 64 pending notifications per app.
@@ -41,6 +41,14 @@ enum ReminderScheduler {
                     title: "Blood pressure check",
                     body: "Time for \(profile.displayName)’s evening reading.",
                     minutes: profile.eveningCheckMinutes
+                ))
+            }
+            if profile.bedtimeReminderEnabled {
+                specs.append(ReminderSpec(
+                    id: "\(prefix)sleep.\(key).bedtime",
+                    title: "Bedtime",
+                    body: "Tap Going to Sleep in MyHealthy to log \(profile.displayName)’s bedtime.",
+                    minutes: profile.bedtimeMinutes
                 ))
             }
             for medication in profile.activeMedications where medication.remindersEnabled {
