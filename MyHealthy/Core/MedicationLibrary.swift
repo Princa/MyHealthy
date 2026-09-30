@@ -185,10 +185,16 @@ enum MedicationLibrary {
             if brands.contains(where: { $0.contains(query) }) { return 3 }
             return nil
         }
-        return all
-            .compactMap { info in score(info).map { (info, $0) } }
-            .sorted { $0.1 == $1.1 ? $0.0.name < $1.0.name : $0.1 < $1.1 }
-            .map { $0.0 }
+        let ranked: [(info: DrugInfo, rank: Int)] = all.compactMap { info in
+            guard let rank = score(info) else { return nil }
+            return (info, rank)
+        }
+        return ranked
+            .sorted { lhs, rhs in
+                if lhs.rank != rhs.rank { return lhs.rank < rhs.rank }
+                return lhs.info.name < rhs.info.name
+            }
+            .map(\.info)
     }
 
     static func lookup(name: String) -> DrugInfo? {
